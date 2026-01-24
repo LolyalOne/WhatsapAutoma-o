@@ -1,0 +1,17 @@
+# Dependências
+node_modules/
+react-ui/node_modules/
+
+# Logs e Arquivos de Sistema
+*.log
+.DS_Store
+Thumbs.db
+
+# Builds Temporários (Mantemos a pasta /ui pois é a extensão compilada)
+react-ui/dist/
+.vite/
+
+# Arquivos de IDE
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,141 @@
+/* src/styles/App.css */
+:root {
+  /* Cores WhatsApp Oficiais e Escuras para Contraste */
+  --wpp-green: #008069;
+  --wpp-green-hover: #006d59;
+  --bg-color: #d1d7db; /* Fundo mais escuro para destacar o painel */
+  --sidebar-bg: #ffffff;
+  
+  /* Textos - Contraste Alto */
+  --text-primary: #111b21;   /* Preto quase absoluto */
+  --text-secondary: #3b4a54; /* Cinza escuro */
+  --text-placeholder: #54656f;
+  
+  /* Bordas */
+  --border-color: #d1d7db;
+  --card-shadow: 0 2px 5px rgba(11,20,26,0.1);
+  
+  --danger: #ea0038;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Animações */
+.fade-in {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Inputs com Fundo Branco e Borda Visível */
+.input-field {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: #ffffff;
+  outline: none;
+  margin-bottom: 10px;
+}
+
+.input-field:focus {
+  border-color: var(--wpp-green);
+  box-shadow: 0 0 0 2px rgba(0, 168, 132, 0.1);
+}
+
+.input-field::placeholder {
+  color: var(--text-placeholder);
+}
+
+/* Cards com Contraste Definido */
+.card {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+/* Botões */
+.btn-primary {
+  background-color: var(--wpp-green);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: var(--wpp-green-hover);
+}
+
+.btn-primary:disabled {
+  background-color: #aebac1;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: #e9edef;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btn-secondary:hover {
+  background-color: #d1d7db;
+}
+
+/* Kanban */
+.kanban-col {
+  background: #e9edef;
+  border-radius: 8px;
+  padding: 10px;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kanban-card {
+  background: white;
+  padding: 8px;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  font-size: 12px;
+  cursor: grab;
+  border-left: 3px solid var(--wpp-green);
+}
+
+.kanban-card:active {
+  cursor: grabbing;
+}
