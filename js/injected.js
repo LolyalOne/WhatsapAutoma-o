@@ -1,326 +1,209 @@
 // js/injected.js
-// VERSÃO COM DEBUG DETALHADO
+// VERSÃO: Fila de Processamento (Queue Pattern)
 
 console.log("[MinhaExtensão] %c Script Injetado Iniciado", "color: green; font-weight: bold; font-size: 14px");
 
-// Variável global para debug
-window.DebugExtensão = {
-    logs: []
+// --- Estado Global ---
+window.DebugExtensão = { logs: [] };
+const messageQueue = []; // Fila de envio
+let isProcessing = false; // Flag de processamento
+
+// Configuração Padrão (Pode ser sobrescrita pelo React)
+let globalConfig = {
+    minDelay: 3,
+    maxDelay: 10,
+    isHuman: true
 };
 
+// --- Utilitários ---
 function log(msg, data = null) {
-    const timestamp = new Date().toLocaleTimeString();
-    const logMsg = `[MinhaExtensão ${timestamp}] ${msg}`;
-    
-    if (data) {
-        console.log(logMsg, data);
-        window.DebugExtensão.logs.push({ msg, data });
-    } else {
-        console.log(logMsg);
-        window.DebugExtensão.logs.push({ msg });
-    }
+    const logMsg = `[MinhaExtensão] ${msg}`;
+    if (data) console.log(logMsg, data);
+    else console.log(logMsg);
 }
 
 function error(msg, err) {
-    const timestamp = new Date().toLocaleTimeString();
-    console.error(`[MinhaExtensão ${timestamp}] ❌ ERRO: ${msg}`, err);
-    window.DebugExtensão.logs.push({ error: msg, details: err });
-    
-    // Tenta avisar a extensão
-    replyToExtension("ERROR_LOG", { msg: msg, details: err.toString() });
+    console.error(`[MinhaExtensão] ❌ ERRO: ${msg}`, err);
+    replyToExtension("ERROR_LOG", { msg: msg, details: err ? err.toString() : '' });
 }
 
-// --- Inicialização ---
-const checkWPP = setInterval(() => {
-    // Verifica se a biblioteca WPP existe
-    if (typeof window.WPP === 'undefined') {
-        log("Aguardando biblioteca WPP ser definida...");
-        return;
-    }
-
-    if (window.WPP.isReady) {
-        clearInterval(checkWPP);
-        log("✅ WPP.isReady é verdadeiro! Sistema pronto.");
-        startListener();
-    } else {
-        log("WPP existe, mas não está pronto. Chamando WPP.webpack.wait()...");
-        if (window.WPP.webpack) {
-            window.WPP.webpack.wait();
-        }
-    }
-}, 1000);
-
-// --- Ouvinte de Comandos ---
-function startListener() {
-    window.addEventListener("message", async (event) => {
-        if (event.source !== window || event.data.type !== "MY_EXTENSION_CMD") return;
-
-        const { command, payload } = event.data;
-        log(`Recebido comando: ${command}`, payload);
-
-        try {
-            switch (command) {
-                case "SEND_MESSAGE":
-                    await sendMessage(payload.phone, payload.message);
-                    break;
-                
-                case "SEND_BATCH":
-                    await sendBatchMessages(payload.numbers, payload.message);
-                    break;
-
-                case "SEND_AUDIO":
-                    await sendAudioMessage(payload.phone, payload.base64, payload.fileName);
-                    break;
-                
-                case "CHECK_STATUS":
-                    checkStatus();
-                    break;
-
-                case "GET_CONTACTS":
-                    await getContacts();
-                    break;
-            }
-        } catch (err) {
-            error(`Falha fatal ao processar ${command}`, err);
-        }
-    });
+function replyToExtension(action, data) {
+    window.postMessage({ type: "MY_EXTENSION_RESP", payload: { action, ...data } }, "*");
 }
-
-// --- Funções Auxiliares ---
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function randomDelay(minSec, maxSec) {
-    const min = minSec * 1000;
-    const max = maxSec * 1000;
+function randomDelay() {
+    const min = globalConfig.minDelay * 1000;
+    const max = globalConfig.maxDelay * 1000;
     return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
-// --- Funções da Automação ---
-
-async function sendBatchMessages(numbers, text) {
-    if (!window.WPP || !window.WPP.chat) {
-        error("WPP não está pronto para envios em massa.");
-        return;
-    }
-
-    const total = numbers.length;
-    const report = { success: 0, failed: 0, details: [] };
-
-    log(`🚀 Iniciando envio em massa para ${total} contatos.`);
-    replyToExtension("BATCH_START", { total });
-
-    for (let i = 0; i < total; i++) {
-        const phone = numbers[i];
-        const currentCount = i + 1;
+// --- WORKER: Processador da Fila ---
+setInterval(async () => {
+    // Só processa se houver itens, não estiver processando e o WPP estiver pronto
+    if (messageQueue.length > 0 && !isProcessing && window.WPP && window.WPP.isReady) {
+        isProcessing = true;
+        const task = messageQueue.shift(); // Pega o primeiro da fila
         
+        replyToExtension("QUEUE_UPDATED", { size: messageQueue.length }); // Avisa a UI
+
         try {
-            // 1. Validação de Número
-            let cleanPhone = phone.replace(/\D/g, '');
-            if (!cleanPhone) throw new Error("Número vazio");
-            
-            const originalId = cleanPhone.includes('@') ? cleanPhone : cleanPhone + '@c.us';
-            let targetId = originalId;
-
-            // Verifica existência (Anti-Ban: evita enviar para não-contas)
-            const check = await window.WPP.contact.queryExists(originalId);
-            if (check && check.wid) {
-                targetId = check.lid ? check.lid._serialized : check.wid._serialized;
-            } else {
-                throw new Error("Número não registrado no WhatsApp");
-            }
-
-            // 2. Envio
-            const result = await window.WPP.chat.sendTextMessage(targetId, text);
-
-            if (result && (result.id || result.ack > 0 || result === true)) {
-                report.success++;
-                log(`[${currentCount}/${total}] Sucesso para ${phone}`);
-            } else {
-                throw new Error("Sem confirmação de entrega");
-            }
-
+            await processMessageTask(task);
         } catch (err) {
-            report.failed++;
-            report.details.push({ phone, error: err.message });
-            log(`[${currentCount}/${total}] Falha para ${phone}: ${err.message}`);
+            error(`Erro ao processar item da fila: ${task.phone}`, err);
         }
-
-        // Reporta progresso para a UI
-        replyToExtension("BATCH_PROGRESS", { 
-            current: currentCount, 
-            total, 
-            success: report.success, 
-            failed: report.failed 
-        });
-
-        // 3. Delay Humanizado (Anti-Ban)
-        // Não espera depois do último envio
-        if (i < total - 1) {
-            const delay = randomDelay(3, 10); // 3 a 10 segundos
-            log(`⏳ Aguardando ${delay/1000}s para o próximo envio...`);
+        
+        // Delay Dinâmico
+        if (messageQueue.length > 0) {
+            const delay = randomDelay();
+            log(`⏳ Aguardando ${delay/1000}s (Config: ${globalConfig.minDelay}-${globalConfig.maxDelay}s)...`);
             await sleep(delay);
         }
+        
+        isProcessing = false;
+        
+        // Se a fila zerou
+        if (messageQueue.length === 0) {
+            replyToExtension("QUEUE_UPDATED", { size: 0 });
+            replyToExtension("BATCH_COMPLETE", {});
+        }
     }
+}, 1000);
 
-    log("✅ Envio em massa finalizado.", report);
-    replyToExtension("BATCH_COMPLETE", report);
-}
-
-async function sendMessage(phone, text) {
-    if (!window.WPP || !window.WPP.chat) {
-        error("WPP.chat não está disponível. O WhatsApp carregou totalmente?");
-        return;
-    }
-
+// --- Lógica de Envio Individual ---
+async function processMessageTask(task) {
     try {
-        log(`Tentando enviar mensagem para ${phone}...`);
+        let cleanPhone = task.phone.replace(/\D/g, '');
+        if (!cleanPhone) throw new Error("Número vazio");
         
-        let cleanPhone = phone.replace(/\D/g, '');
-        if (!cleanPhone) throw new Error("Número de telefone vazio.");
-
-        // Garante o sufixo @c.us
         const originalId = cleanPhone.includes('@') ? cleanPhone : cleanPhone + '@c.us';
-        
-        // Variável para armazenar o ID final de envio (pode mudar para LID)
         let targetId = originalId;
 
-        // 1. Verifica se o número existe e tenta obter o LID
-        try {
-            log(`Consultando existência para ${originalId}...`);
-            const check = await window.WPP.contact.queryExists(originalId);
-            
-            if (check && check.wid) {
-                // Se retornou um LID, usamos ele preferencialmente
-                if (check.lid) {
-                    targetId = check.lid._serialized;
-                    log(`✅ LID encontrado: ${targetId}. Usando para envio seguro.`);
-                } else {
-                    log(`⚠️ Contato existe, mas sem LID. Usando ID original: ${originalId}`);
-                }
-            } else {
-                throw new Error("O número não possui conta no WhatsApp.");
-            }
-        } catch (queryError) {
-            // Se o queryExists falhar (como no erro No LID), logamos mas tentamos enviar mesmo assim
-            // Isso serve de fallback caso a versão da lib esteja com bug no query
-            log(`⚠️ Erro no queryExists (${queryError.message}). Tentando envio direto para ${targetId}...`);
+        // Verifica existência
+        const check = await window.WPP.contact.queryExists(originalId);
+        if (check && check.wid) {
+            targetId = check.lid ? check.lid._serialized : check.wid._serialized;
+        } else {
+            throw new Error("Número inválido ou sem WhatsApp");
         }
 
-        // 2. Envia a mensagem usando o melhor ID disponível
-        const result = await window.WPP.chat.sendTextMessage(targetId, text);
-        
-        if (result && (result.id || result.ack > 0 || result === true)) {
-             replyToExtension("MSG_RESULT", { success: true, result });
+        // Simulação Humana (Condicional)
+        if (globalConfig.isHuman) {
+            await window.WPP.chat.markIsComposing(targetId, 1500);
+            await sleep(1500);
+        }
+
+        // Variáveis Dinâmicas
+        // Substitui {nome} pelo nome fornecido na task, ou vazio se não houver
+        let textToSend = task.message;
+        if (task.name) {
+            textToSend = textToSend.replace(/{nome}/gi, task.name);
         } else {
-             replyToExtension("MSG_RESULT", { success: false, error: "Sem confirmação de envio." });
+            // Se não tem nome, remove a tag {nome} para não ficar feio
+            textToSend = textToSend.replace(/{nome}/gi, '');
+        }
+
+        const result = await window.WPP.chat.sendTextMessage(targetId, textToSend);
+
+        if (result && (result.id || result.ack > 0 || result === true)) {
+            replyToExtension("ITEM_SUCCESS", { phone: task.phone });
+        } else {
+            throw new Error("Sem confirmação de entrega");
         }
 
     } catch (err) {
-        error("Erro fatal no sendMessage", err);
-        replyToExtension("MSG_RESULT", { success: false, error: err.toString() });
+        replyToExtension("ITEM_ERROR", { phone: task.phone, error: err.message });
     }
 }
+
+// --- Listener Principal ---
+window.addEventListener("message", async (event) => {
+    if (event.source !== window || event.data.type !== "MY_EXTENSION_CMD") return;
+
+    const { command, payload } = event.data;
+    log(`Comando recebido: ${command}`, payload);
+
+    try {
+        switch (command) {
+            case "UPDATE_CONFIG":
+                // Atualiza configuração global
+                if (payload) {
+                    globalConfig = { ...globalConfig, ...payload };
+                    log("Configurações atualizadas:", globalConfig);
+                }
+                break;
+
+            case "ADD_TO_QUEUE":
+                if (Array.isArray(payload.numbers)) {
+                    // Agora aceita objetos {number, name} ou strings
+                    payload.numbers.forEach(item => {
+                        const phone = typeof item === 'string' ? item : item.number;
+                        const name = typeof item === 'object' ? item.name : null;
+                        messageQueue.push({ phone, name, message: payload.message });
+                    });
+                    log(`Adicionados ${payload.numbers.length} itens à fila.`);
+                    replyToExtension("QUEUE_UPDATED", { size: messageQueue.length });
+                }
+                break;
+
+
+            case "SEND_AUDIO":
+                await sendAudioMessage(payload.phone, payload.base64, payload.fileName);
+                break;
+
+            case "GET_CONTACTS":
+                await getContacts();
+                break;
+        }
+    } catch (err) {
+        error(`Erro no comando ${command}`, err);
+    }
+});
+
+// --- Outras Funções (Áudio, Contatos) ---
 
 async function sendAudioMessage(phone, base64, fileName) {
-    if (!window.WPP || !window.WPP.chat) {
-        error("WPP não está pronto.");
-        return;
-    }
-
+    if (!window.WPP || !window.WPP.chat) return error("WPP Indisponível");
     try {
-        log(`Tentando enviar áudio para ${phone}...`);
-        
         let cleanPhone = phone.replace(/\D/g, '');
         const id = cleanPhone.includes('@') ? cleanPhone : cleanPhone + '@c.us';
-
-        // Converte Base64 para Blob para enviar
-        const fetchResponse = await fetch(base64);
-        const blob = await fetchResponse.blob();
+        const blob = await (await fetch(base64)).blob();
         
-        // Parâmetros cruciais: isPtt: true (envia como microfone azul)
-        const result = await window.WPP.chat.sendFileMessage(
-            id,
-            blob,
-            {
-                type: 'audio',
-                isPtt: true, // Segredo do "gravado na hora"
-                filename: fileName || 'audio.mp3'
-            }
-        );
+        await window.WPP.chat.markIsRecording(id, 2000); // Simula gravando
+        await sleep(2000);
 
-        if (result && (result.id || result.ack > 0 || result === true)) {
-             replyToExtension("MSG_RESULT", { success: true, type: 'audio', id: result.id });
-        } else {
-             replyToExtension("MSG_RESULT", { success: false, error: "Sem confirmação de envio." });
-        }
-
-    } catch (err) {
-        error("Erro ao enviar áudio", err);
-        replyToExtension("MSG_RESULT", { success: false, error: err.toString() });
-    }
-}
-
-function checkStatus() {
-    try {
-        const isRegistered = window.WPP.conn.isRegistered();
-        const isMainReady = window.WPP.conn.isMainReady();
-        
-        log(`Status Check - Registered: ${isRegistered}, MainReady: ${isMainReady}`);
-        
-        replyToExtension("STATUS_RESULT", { 
-            connected: isRegistered && isMainReady 
+        const result = await window.WPP.chat.sendFileMessage(id, blob, {
+            type: 'audio', isPtt: true, filename: fileName || 'audio.mp3'
         });
+        if (result.id) replyToExtension("ITEM_SUCCESS", { phone });
     } catch (err) {
-        error("Erro ao verificar status", err);
+        replyToExtension("ITEM_ERROR", { phone, error: err.message });
     }
 }
 
 async function getContacts() {
-    try {
-        log("Iniciando download de contatos...");
-        
-        if (!window.WPP || !window.WPP.contact) {
-            throw new Error("Módulo WPP.contact não encontrado");
-        }
+    if (!window.WPP || !window.WPP.contact) return;
+    const contacts = await window.WPP.contact.list();
+    const valid = contacts.filter(c => (c.isMyContact || c.isGroup) && !c.isMe);
+    const mapped = valid.map(c => ({
+        id: c.id._serialized,
+        name: c.name || c.pushname || c.formattedName || "Sem Nome",
+        number: c.id.user,
+        isGroup: c.isGroup,
+        avatar: c.profilePicThumbObj ? c.profilePicThumbObj.img : null 
+    }));
+    replyToExtension("CONTACTS_LIST", { contacts: mapped });
+}
 
-        const contacts = await window.WPP.contact.list();
-        log(`WPP retornou ${contacts.length} registros brutos.`);
-        
-        // Filtra contatos válidos (Meus contatos, Grupos ou conversas ativas)
-        // Nota: Ajuste os filtros conforme a necessidade do produto
-        const validContacts = contacts.filter(c => 
-            (c.isMyContact || c.isGroup) && !c.isMe
-        );
-
-        // Mapeia para um formato leve para o React
-        const mappedContacts = validContacts.map(c => ({
-            id: c.id._serialized,
-            name: c.name || c.pushname || c.formattedName || "Sem Nome",
-            number: c.id.user,
-            isGroup: c.isGroup,
-            isBusiness: c.isBusiness,
-            isMyContact: c.isMyContact,
-            // Tenta pegar a url da imagem (thumb) se disponível em cache
-            avatar: c.profilePicThumbObj ? c.profilePicThumbObj.img : null 
-        }));
-        
-        log(`Filtrados ${mappedContacts.length} contatos válidos. Enviando para UI.`);
-        
-        // Envia para o React (UI)
-        replyToExtension("CONTACTS_LIST", { contacts: mappedContacts });
-        
-    } catch (err) {
-        error("Erro ao baixar contatos", err);
-        replyToExtension("CONTACTS_ERROR", { error: err.toString() });
+// Inicialização
+const init = setInterval(() => {
+    if (window.WPP && window.WPP.isReady) {
+        clearInterval(init);
+        log("✅ Sistema Pronto. Fila Ativa.");
+    } else if (window.WPP && window.WPP.webpack) {
+        window.WPP.webpack.wait();
     }
-}
-
-function replyToExtension(action, data) {
-    window.postMessage({
-        type: "MY_EXTENSION_RESP",
-        payload: { action, ...data }
-    }, "*");
-}
+}, 1000);
