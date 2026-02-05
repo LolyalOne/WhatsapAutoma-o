@@ -47,10 +47,17 @@ window.addEventListener("message", (event) => {
     // Segurança: só aceita mensagens da própria janela e do nosso tipo
     if (event.source !== window || !event.data.type || event.data.type !== "MY_EXTENSION_RESP") return;
 
-    // Envia para o Popup (background/runtime)
+    // Tenta enviar para o Popup/Background se houver, mas silencia o erro se não houver ninguém ouvindo
     try {
-        chrome.runtime.sendMessage(event.data.payload);
+        const promise = chrome.runtime.sendMessage(event.data.payload);
+        // No Manifest V3, sendMessage retorna uma Promise.
+        // Precisamos capturar o erro da Promise para não sujar o console.
+        if (promise && typeof promise.catch === 'function') {
+            promise.catch(() => {
+                // Silenciosamente ignora o erro "Receiving end does not exist"
+            });
+        }
     } catch (e) {
-        // O popup pode estar fechado, ignorar erro
+        // Ignora erros síncronos
     }
 });
