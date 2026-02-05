@@ -1,93 +1,110 @@
 /* src/styles/App.css */
+
+/* 1. Definição de Variáveis (Tema Claro Padrão) */
 :root {
-  /* Cores WhatsApp Oficiais e Escuras para Contraste */
-  --wpp-green: #008069;
-  --wpp-green-hover: #006d59;
-  --bg-color: #d1d7db; /* Fundo mais escuro para destacar o painel */
-  --sidebar-bg: #ffffff;
+  --wpp-green: #00a884;
+  --wpp-green-hover: #008f6f;
   
-  /* Textos - Contraste Alto */
-  --text-primary: #111b21;   /* Preto quase absoluto */
-  --text-secondary: #3b4a54; /* Cinza escuro */
-  --text-placeholder: #54656f;
+  /* Cores de Fundo */
+  --bg-app: #ffffff;
+  --bg-panel: #f0f2f5;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
   
-  /* Bordas */
-  --border-color: #d1d7db;
-  --card-shadow: 0 2px 5px rgba(11,20,26,0.1);
+  /* Cores de Texto (Escuro por padrão) */
+  --text-primary: #111b21; /* Preto suave do WhatsApp */
+  --text-secondary: #54656f;
+  --text-placeholder: #8696a0;
   
-  --danger: #ea0038;
+  /* Bordas e Divisórias */
+  --border-color: #e9edef;
+  --shadow-color: rgba(0,0,0,0.1);
 }
 
+/* 2. Tema Escuro (Ativado pela classe .dark-theme) */
+.dark-theme {
+  --bg-app: #111b21;
+  --bg-panel: #0b141a;
+  --bg-card: #202c33;
+  --bg-input: #2a3942;
+  
+  --text-primary: #e9edef; /* Texto claro para fundo escuro */
+  --text-secondary: #8696a0;
+  --text-placeholder: #8696a0;
+  
+  --border-color: #2a3942;
+  --shadow-color: rgba(0,0,0,0.3);
+}
+
+/* 3. Reset e Fonte Global */
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-body {
-  font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+/* Força a fonte Arial em tudo dentro da extensão */
+body, button, input, textarea, div, span, h1, h2, h3, h4, h5, h6 {
+  font-family: Arial, sans-serif !important; 
   color: var(--text-primary);
-  font-size: 14px;
-  line-height: 1.5;
 }
 
-/* Animações */
-.fade-in {
-  animation: fadeIn 0.2s ease-out forwards;
-}
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: translateY(0); }
+/* 4. Estilização dos Componentes */
+.app-container {
+  background-color: var(--bg-panel);
+  height: 100vh;
+  display: flex;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Inputs com Fundo Branco e Borda Visível */
+.sidebar {
+  background-color: var(--bg-app);
+  border-right: 1px solid var(--border-color);
+}
+
+.content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background-color: var(--bg-app);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 5px var(--shadow-color);
+}
+
 .input-field {
-  width: 100%;
-  padding: 10px;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  font-size: 14px;
-  color: var(--text-primary);
-  background: #ffffff;
+  padding: 10px;
+  width: 100%;
   outline: none;
-  margin-bottom: 10px;
 }
 
 .input-field:focus {
   border-color: var(--wpp-green);
-  box-shadow: 0 0 0 2px rgba(0, 168, 132, 0.1);
 }
 
-.input-field::placeholder {
-  color: var(--text-placeholder);
-}
-
-/* Cards com Contraste Definido */
-.card {
-  background: white;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-}
-
-/* Botões */
 .btn-primary {
   background-color: var(--wpp-green);
-  color: white;
+  color: #fff; /* Texto do botão sempre branco */
   border: none;
-  padding: 10px 16px;
+  padding: 10px;
   border-radius: 6px;
-  font-weight: 600;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  font-size: 14px;
+  font-weight: bold;
   transition: background 0.2s;
 }
 
@@ -95,47 +112,12 @@ body {
   background-color: var(--wpp-green-hover);
 }
 
-.btn-primary:disabled {
-  background-color: #aebac1;
-  cursor: not-allowed;
+/* Animação suave */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
 }
 
-.btn-secondary {
-  background-color: #e9edef;
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
-  width: 100%;
-}
-
-.btn-secondary:hover {
-  background-color: #d1d7db;
-}
-
-/* Kanban */
-.kanban-col {
-  background: #e9edef;
-  border-radius: 8px;
-  padding: 10px;
-  min-width: 140px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.kanban-card {
-  background: white;
-  padding: 8px;
-  border-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-  font-size: 12px;
-  cursor: grab;
-  border-left: 3px solid var(--wpp-green);
-}
-
-.kanban-card:active {
-  cursor: grabbing;
+ @keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }

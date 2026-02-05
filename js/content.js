@@ -1,6 +1,6 @@
 // content.js
 
-// 1. Injeção dos Scripts
+// 1. Injeção dos Scripts de Lógica (Main World)
 function injectScript(file_path) {
     const script = document.createElement('script');
     script.src = chrome.runtime.getURL(file_path);
@@ -8,8 +8,26 @@ function injectScript(file_path) {
     (document.head || document.documentElement).appendChild(script);
 }
 
+// Injeta o CSS da UI
+function injectCSS(file_path) {
+    const link = document.createElement('link');
+    link.href = chrome.runtime.getURL(file_path);
+    link.type = 'text/css';
+    link.rel = 'stylesheet';
+    (document.head || document.documentElement).appendChild(link);
+}
+
+// Inicialização
 injectScript('js/wppconnect-wa.js');
-setTimeout(() => { injectScript('js/injected.js'); }, 1000);
+setTimeout(() => { 
+    injectScript('js/injected.js'); 
+    injectCSS('ui/index.css'); // Injeta o CSS gerado pelo Vite
+}, 1000);
+
+// Cria o Container para o React (Se o ui/index.js não criar, nós criamos)
+// Nota: Como ui/index.js é um content script, ele roda no ISOLATED world,
+// mas ele precisa de um elemento no DOM para se "pendurar".
+// Vamos deixar o próprio React criar, mas garantir que o CSS esteja lá.
 
 // 2. Ouvir Popup -> Enviar para Página (Main World)
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {

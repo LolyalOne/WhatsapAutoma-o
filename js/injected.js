@@ -92,8 +92,12 @@ async function processMessageTask(task) {
 
         // Simulação Humana (Condicional)
         if (globalConfig.isHuman) {
-            await window.WPP.chat.markIsComposing(targetId, 1500);
-            await sleep(1500);
+            // 1. Simula Digitação (Humanização)
+            // O tempo é calculado: 100ms por caractere da mensagem (mínimo 2s, máximo 5s)
+            const typingTime = Math.min(Math.max(task.message.length * 100, 2000), 5000);
+            log(`Digitando para ${targetId} por ${typingTime}ms...`);
+            await window.WPP.chat.markIsComposing(targetId, typingTime);
+            await sleep(typingTime);
         }
 
         // Variáveis Dinâmicas
@@ -157,6 +161,10 @@ window.addEventListener("message", async (event) => {
             case "GET_CONTACTS":
                 await getContacts();
                 break;
+
+            case "GET_LABELS":
+                await getLabels();
+                break;
         }
     } catch (err) {
         error(`Erro no comando ${command}`, err);
@@ -172,8 +180,10 @@ async function sendAudioMessage(phone, base64, fileName) {
         const id = cleanPhone.includes('@') ? cleanPhone : cleanPhone + '@c.us';
         const blob = await (await fetch(base64)).blob();
         
-        await window.WPP.chat.markIsRecording(id, 2000); // Simula gravando
-        await sleep(2000);
+        const recordTime = 3000; 
+        log(`Gravando áudio fake para ${id}...`);
+        await window.WPP.chat.markIsRecording(id, recordTime);
+        await sleep(recordTime);
 
         const result = await window.WPP.chat.sendFileMessage(id, blob, {
             type: 'audio', isPtt: true, filename: fileName || 'audio.mp3'
@@ -186,16 +196,69 @@ async function sendAudioMessage(phone, base64, fileName) {
 
 async function getContacts() {
     if (!window.WPP || !window.WPP.contact) return;
-    const contacts = await window.WPP.contact.list();
-    const valid = contacts.filter(c => (c.isMyContact || c.isGroup) && !c.isMe);
-    const mapped = valid.map(c => ({
-        id: c.id._serialized,
-        name: c.name || c.pushname || c.formattedName || "Sem Nome",
-        number: c.id.user,
-        isGroup: c.isGroup,
-        avatar: c.profilePicThumbObj ? c.profilePicThumbObj.img : null 
-    }));
-    replyToExtension("CONTACTS_LIST", { contacts: mapped });
+    
+    try {
+        const contacts = await window.WPP.contact.list();
+        
+        // 1. Filtragem Segura
+        const valid = contacts.filter(c => {
+            return c && c.id && (c.isMyContact || c.isGroup) && !c.isMe;
+        });
+
+        // 2. Mapeamento Estrito (Apenas dados primitivos)
+        const mapped = valid.map(c => {
+            let avatar = null;
+            // Tenta extrair avatar com segurança
+            try {
+                if (c.profilePicThumbObj && c.profilePicThumbObj.img) {
+                    avatar = c.profilePicThumbObj.img;
+                }
+            } catch (e) {}
+
+            return {
+                id: c.id._serialized || "",
+                name: c.name || c.pushname || c.formattedName || "Sem Nome",
+                number: c.id.user || "",
+                isGroup: !!c.isGroup,
+                avatar: typeof avatar === 'string' ? avatar : null
+            };
+        });
+
+        // 3. Sanitização Final (Remove qualquer "lixo" que o postMessage não aceite)
+        // Isso resolve o DOMException (DataCloneError)
+        const safePayload = JSON.parse(JSON.stringify(mapped));
+
+        replyToExtension("CONTACTS_LIST", { contacts: safePayload });
+        
+    } catch (err) {
+        error("Erro ao processar contatos", err);
+        replyToExtension("CONTACTS_ERROR", { error: "Falha ao ler contatos." });
+    }
+}
+
+async function getLabels() {
+    try {
+        log("Buscando etiquetas (Labels) do WhatsApp Business...");
+        
+        if (!window.WPP.label || !window.WPP.label.getAllLabels) {
+            throw new Error("Este WhatsApp não é Business ou o módulo Labels falhou.");
+        }
+
+        const labels = await window.WPP.label.getAllLabels();
+        
+        const cleanLabels = labels.map(l => ({
+            id: l.id,
+            name: l.name,
+            color: l.hexColor,
+            count: l.count
+        }));
+
+        replyToExtension("LABELS_LIST", { labels: cleanLabels });
+
+    } catch (err) {
+        log("Erro ao buscar labels (pode ser WA Pessoal):", err);
+        replyToExtension("LABELS_LIST", { labels: [] });
+    }
 }
 
 // Inicialização

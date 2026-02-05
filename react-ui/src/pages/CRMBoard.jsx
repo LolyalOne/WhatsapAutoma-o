@@ -18,6 +18,33 @@ const CRMBoard = () => {
     localStorage.setItem('crm_columns', JSON.stringify(columns));
   }, [columns]);
 
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data && event.data.type === 'MY_EXTENSION_RESP') {
+        const { action, labels } = event.data.payload;
+        if (action === 'LABELS_LIST' && labels && labels.length > 0) {
+          const newCols = {};
+          labels.forEach(l => {
+            // Preserva itens se a coluna já existia
+            newCols[l.id] = { 
+              title: l.name, 
+              items: columns[l.id] ? columns[l.id].items : [],
+              color: l.color
+            };
+          });
+          setColumns(newCols);
+          alert(`${labels.length} Etiquetas importadas do WhatsApp!`);
+        }
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [columns]);
+
+  const importLabels = () => {
+    window.postMessage({ type: "MY_EXTENSION_CMD", command: "GET_LABELS" }, "*");
+  };
+
   const addLead = () => {
     if (!newLead) return;
     setColumns(prev => ({
@@ -76,7 +103,8 @@ const CRMBoard = () => {
         <h4>CRM Kanban</h4>
         <div style={{display:'flex', gap:'5px', marginBottom:'15px'}}>
             <input className="input-field" style={{marginBottom:0}} placeholder="Novo Lead (Nome/Tel)" value={newLead} onChange={e => setNewLead(e.target.value)} />
-            <button className="btn-primary" style={{width:'auto'}} onClick={addLead}><Plus size={18}/></button>
+            <button className="btn-primary" style={{width:'auto'}} onClick={addLead} title="Adicionar Lead"><Plus size={18}/></button>
+            <button className="btn-primary" style={{width:'auto', backgroundColor: '#008069'}} onClick={importLabels} title="Sincronizar Etiquetas">Sincronizar</button>
         </div>
         
         <div style={{display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '10px', minHeight: '300px'}}>
@@ -86,7 +114,7 @@ const CRMBoard = () => {
                 className="kanban-col"
                 onDragOver={onDragOver}
                 onDrop={(e) => onDrop(e, colId)}
-                style={{minWidth: '160px', flex: 1}}
+                style={{minWidth: '160px', flex: 1, borderTop: col.color ? `4px solid ${col.color}` : 'none'}}
             >
               <strong style={{fontSize: '12px', color: '#54656f', marginBottom:'8px', display: 'block'}}>{col.title} ({col.items.length})</strong>
               
