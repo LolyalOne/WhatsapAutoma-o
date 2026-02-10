@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Minha Automação Zap",
+  "version": "1.1",
+  "description": "Exemplo de automação usando wa-js (Engenharia Reversa Educacional)",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://web.whatsapp.com/*"
+  ],
+  "action": {
+    "default_title": "Minha Automação Zap"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["js/wppconnect-wa.js", "js/db.js", "js/injected.js", "ui/index.css"],
+      "matches": ["https://web.whatsapp.com/*"]
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://web.whatsapp.com/*"],
+      "js": ["js/db.js", "js/content.js", "ui/index.js"],
+      "run_at": "document_end"
+    }
+  ]
+}

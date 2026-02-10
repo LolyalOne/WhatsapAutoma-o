@@ -1,0 +1,23 @@
+# Como instalar sua Automação de WhatsApp
+
+1. **Passo Crítico (O "Motor"):**
+   - Abra o arquivo `js/wppconnect-wa.js` que está nesta pasta.
+   - Ele contém instruções. Basicamente, você precisa baixar o código da biblioteca `wa-js`.
+   - Link direto: https://cdnjs.cloudflare.com/ajax/libs/wa-js/3.19.8/wppconnect-wa.js (ou use a versão mais recente do GitHub `wppconnect-team/wa-js`).
+   - Copie todo o código do link e cole dentro de `js/wppconnect-wa.js`, substituindo o texto que está lá.
+
+2. **Instalar no Chrome:**
+   - Abra o navegador Google Chrome.
+   - Digite na barra de endereço: `chrome://extensions/`
+   - No canto superior direito, ative o **"Modo do desenvolvedor"**.
+   - Clique no botão **"Carregar sem compactação"** (Load Unpacked).
+   - Selecione a pasta `MinhaAutomacaoZap` (a pasta raiz onde está o `manifest.json`).
+
+3. **Usar:**
+   - Abra o https://web.whatsapp.com/ e espere carregar.
+   - Clique no ícone da sua nova extensão (parece uma peça de quebra-cabeça).
+   - Digite um número (ex: 5511999999999) e uma mensagem.
+   - Clique em Enviar.
+   - Abra o Console do Desenvolvedor (F12) para ver os logs de sucesso ou erro.
+
+**Nota:** Esta extensão usa a mesma base técnica do Revzap (`wa-js`), permitindo que você programe suas próprias funcionalidades sem depender de terceiros.
