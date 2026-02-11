@@ -9,8 +9,9 @@
   --bg-input: #ffffff;
   --text-primary: #111b21;
   --text-secondary: #54656f;
+  --text-placeholder: #8696a0;
   --border-color: #e9edef;
-  --shadow-color: rgba(0,0,0,0.15); /* Sombra mais forte para janela flutuante */
+  --shadow-color: rgba(0,0,0,0.15);
 }
 
 .dark-theme {
@@ -20,46 +21,40 @@
   --bg-input: #2a3942;
   --text-primary: #e9edef;
   --text-secondary: #8696a0;
+  --text-placeholder: #8696a0;
   --border-color: #2a3942;
   --shadow-color: rgba(0,0,0,0.5);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body, button, input, textarea, div, span, h1, h2, h3, h4, h5, h6 {
-  font-family: Arial, sans-serif !important;
-  color: var(--text-primary);
+/* Garante que o reset e a fonte Arial fiquem apenas DENTRO da extensão */
+.app-container, .app-container * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif !important;
 }
 
-/* --- Container Principal (Janela Flutuante) --- */
 .app-container {
   background-color: var(--bg-panel);
-  /* Removemos height 100% e posições fixas aqui, serão controladas via JS */
   display: flex;
   flex-direction: row;
-  border-radius: 12px; /* Cantos arredondados */
-  overflow: hidden; /* Importante para o resize funcionar visualmente */
+  border-radius: 12px;
+  overflow: hidden;
   box-shadow: 0 10px 30px var(--shadow-color);
   border: 1px solid var(--border-color);
-  
-  /* Habilita redimensionamento nativo do CSS */
-  resize: both; 
-  overflow: auto;
+  resize: both;
   min-width: 400px;
   min-height: 300px;
-  max-width: 90vw;
-  max-height: 90vh;
 }
 
-/* Área de "Pega" para arrastar */
+/* ... Outros estilos mantidos ... */
+
 .drag-handle {
-  cursor: move; /* Cursor de movimento padrão */
   cursor: grab;
-  user-select: none; /* Impede seleção de texto ao arrastar */
-  z-index: 10; /* Garante que fique acima do conteúdo interno */
+  user-select: none;
+  z-index: 10;
 }
-.drag-handle:active {
-  cursor: grabbing;
-}
+.drag-handle:active { cursor: grabbing; }
 
 .sidebar {
   background-color: var(--bg-app);
@@ -71,8 +66,7 @@ body, button, input, textarea, div, span, h1, h2, h3, h4, h5, h6 {
   align-items: center;
   padding-top: 10px;
   gap: 15px;
-  /* Importante: sidebar também é handle, então z-index ajuda */
-  position: relative; 
+  position: relative;
 }
 
 .content-area {
@@ -80,7 +74,7 @@ body, button, input, textarea, div, span, h1, h2, h3, h4, h5, h6 {
   display: flex;
   flex-direction: column;
   background-color: var(--bg-panel);
-  overflow: hidden; 
+  overflow: hidden;
   position: relative;
 }
 
@@ -92,34 +86,33 @@ body, button, input, textarea, div, span, h1, h2, h3, h4, h5, h6 {
   align-items: center;
   justify-content: space-between;
   padding: 0 15px;
-  /* Garante área clicável */
-  position: relative;
   z-index: 10;
 }
 
-/* Estilos gerais (mantidos) */
 .card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 15px;
   padding: 15px;
   margin-bottom: 15px;
 }
+
 .input-field {
   background-color: var(--bg-input);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: 12px;
   padding: 10px;
   width: 100%;
   outline: none;
 }
+
 .btn-primary {
   background-color: var(--wpp-green);
   color: #fff;
   border: none;
   padding: 10px;
-  border-radius: 6px;
+  border-radius: 20px;
   cursor: pointer;
   font-weight: bold;
 }
@@ -129,23 +122,43 @@ body, button, input, textarea, div, span, h1, h2, h3, h4, h5, h6 {
   color: var(--text-primary);
   border: 1.5px solid var(--border-color);
   padding: 10px;
-  border-radius: 6px;
+  border-radius: 15px;
   cursor: pointer;
   font-weight: 500;
-  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
-.btn-secondary:hover {
-  background-color: var(--border-color);
-  border-color: var(--text-placeholder);
-}
-
-.dark-theme .btn-secondary:hover {
-  filter: brightness(1.2);
-}
 .fade-in { animation: fadeIn 0.3s ease-in-out; }
- @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+/* Estilo do Toggle Switch (Botão Humano) */
+.switch-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  background: var(--bg-panel);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.switch-track {
+  width: 44px;
+  height: 22px;
+  border-radius: 11px;
+  position: relative;
+  transition: background 0.3s;
+}
+
+.switch-thumb {
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  transition: left 0.2s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}

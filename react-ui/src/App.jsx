@@ -9,10 +9,8 @@ import './styles/App.css';
 import Dashboard from './pages/Dashboard';
 import MassSender from './pages/MassSender';
 import CRMBoard from './pages/CRMBoard';
-import AudioSender from './pages/AudioSender';
 import QuickReplies from './pages/QuickReplies';
 import SettingsScreen from './pages/SettingsScreen';
-import GroupTools from './pages/GroupTools';
 import { incrementSent, incrementFailed } from './utils/stats';
 
 function App() {
@@ -67,8 +65,18 @@ function App() {
 
   const handleMouseMove = (e) => {
     if (isDragging.current) {
-        const newX = e.clientX - dragOffset.current.x;
-        const newY = e.clientY - dragOffset.current.y;
+        let newX = e.clientX - dragOffset.current.x;
+        let newY = e.clientY - dragOffset.current.y;
+
+        // Limites: Garante que pelo menos 100px da janela fiquem sempre dentro da tela
+        const minX = -350; // Largura da janela menos um pedaço
+        const minY = 0;
+        const maxX = window.innerWidth - 100;
+        const maxY = window.innerHeight - 100;
+
+        newX = Math.max(minX, Math.min(newX, maxX));
+        newY = Math.max(minY, Math.min(newY, maxY));
+
         setPosition({ x: newX, y: newY });
     }
   };
@@ -92,9 +100,7 @@ function App() {
   const menuItems = [
     { id: 'dashboard', icon: <LayoutDashboard size={20}/>, label: 'Dash' },
     { id: 'mass-sender', icon: <Send size={20}/>, label: 'Disparo' },
-    { id: 'group-tools', icon: <Users size={20}/>, label: 'Grupos' },
     { id: 'crm', icon: <ListFilter size={20}/>, label: 'CRM' },
-    { id: 'audio', icon: <Mic size={20}/>, label: 'Áudio' },
     { id: 'quick', icon: <MessageSquare size={20}/>, label: 'Rápidas' },
     { id: 'settings', icon: <Settings size={20}/>, label: 'Config' },
   ];
@@ -102,9 +108,7 @@ function App() {
   const views = {
     dashboard: <Dashboard isDark={isDark} />,
     'mass-sender': <MassSender isDark={isDark} />,
-    'group-tools': <GroupTools isDark={isDark} />,
     crm: <CRMBoard isDark={isDark} />,
-    audio: <AudioSender isDark={isDark} />,
     quick: <QuickReplies isDark={isDark} />,
     settings: <SettingsScreen isDark={isDark} />
   };
